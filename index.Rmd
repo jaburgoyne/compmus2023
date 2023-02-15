@@ -23,7 +23,7 @@ Welcome to Computational Musicology 2023!
 
 You can access the lecture notes at the following links.
 
-  - [Week 7 · Computational Musicology and (Audio) Visualisation](./notes/compmus2023-w07.html)
+  - [Week 7 · Computational Musicology and (Audio) Visualisation](./notes/compmus-2023-w07.html)
 
 This storyboard contains further examples from each week to inspire you. You can download the raw source code of the storyboard [here](./index.Rmd).
 
