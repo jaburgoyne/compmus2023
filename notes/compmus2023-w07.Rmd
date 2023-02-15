@@ -182,7 +182,7 @@ awards |>                    # Start with awards.
     )
   ) +
   geom_point() +              # Scatter plot.
-  geom_rug(size = 0.1) +      # Add 'fringes' to show data distribution.
+  geom_rug(linewidth = 0.1) + # Add 'fringes' to show data distribution.
   geom_text(                  # Add text labels from above.
     aes(
       x = valence,
@@ -203,7 +203,7 @@ awards |>                    # Start with awards.
     nudge_x = -0.05,          # Nudge the label slightly left.
     nudge_y = 0.02            # Nudge the label slightly up.
   ) +
-  facet_wrap(~category) +     # Separate charts per playlist.
+  facet_wrap(~ category) +    # Separate charts per playlist.
   scale_x_continuous(         # Fine-tune the x axis.
     limits = c(0, 1),
     breaks = c(0, 0.50, 1),   # Use grid-lines for quadrants only.
