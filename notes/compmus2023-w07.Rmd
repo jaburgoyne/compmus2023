@@ -26,6 +26,18 @@ You can download the raw source code for these lecture notes [here](compmus2023-
 
 If you want some distraction *after* the lecture, have a look at the [Sources of Good Data Visualisations](https://canvas.uva.nl/courses/37009/pages/sources-of-sometimes-good-data-visualisations?module_item_id=1523431) on Canvas.
 
+### Wednesday · 16 February · Lab
+
+If you have time before this lab, [try to connect your portfolio to Spotify](https://canvas.uva.nl/courses/37009/pages/connecting-your-portfolio-to-spotify?module_item_id=1523448). If you get stuck, your TA will help you during the lab session.
+
+- Introductions (5 min)
+- Review: Spotify, Github Pages, and R Markdown (15 min)
+- Breakout 2: 'Let It Go' (20 min)
+- Plenary Discussion: Breakout findings (5 min)
+- Demo: ggplot (15 min)
+- Breakout 3: Digster decade comparison (20 min)
+- Plenary Discussion: Breakout findings (10 min)
+
 ## Breakout 1: Spotify Features
 
 Visit the [Spotify feature documentation](https://developer.spotify.com/documentation/web-api/reference/#/operations/get-audio-features). It is quite short -- and Spotify provides no other explanation of what their features mean.
@@ -38,18 +50,6 @@ For each feature, discuss with your group which of the four 'musical moments' yo
 Some of them are obvious, and some of them are very much not!
 
 Be prepared to discuss your conclusions with the class at the end of the breakout.
-
-### Wednesday · 16 February · Lab
-
-If you have time before this lab, [try to connect your portfolio to Spotify](https://canvas.uva.nl/courses/37009/pages/connecting-your-portfolio-to-spotify?module_item_id=1523448). If you get stuck, your TA will help you during the lab session.
-
-- Introductions (5 min)
-- Review: Spotify, Github Pages, and R Markdown (15 min)
-- Breakout 2: 'Let It Go' (20 min)
-- Plenary Discussion: Breakout findings (5 min)
-- Demo: ggplot (15 min)
-- Breakout 3: Digster decade comparison (20 min)
-- Plenary Discussion: Breakout findings (10 min)
 
 ## Breakout 2: 'Let It Go'
 
