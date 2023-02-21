@@ -7,7 +7,7 @@ output:
     toc: true
     theme:
       version: 4
-      bootswatch: sandstone
+      bootswatch: litera
 ---
 
 You can download the raw source code for these lecture notes [here](compmus2023-w07.Rmd).

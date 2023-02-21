@@ -7,7 +7,7 @@ output:
     storyboard: true
     theme:
       version: 4
-      bootswatch: sandstone
+      bootswatch: litera
     self_contained: false
 ---
 
@@ -15,6 +15,7 @@ output:
 library(tidyverse)
 library(plotly)
 library(spotifyr)
+library(compmus)
 ```
 
 ### Welcome to Computational Musicology 2023!
@@ -24,6 +25,7 @@ Welcome to Computational Musicology 2023!
 You can access the lecture notes at the following links.
 
   - [Week 7 · Computational Musicology and (Audio) Visualisation](./notes/compmus2023-w07.html)
+  - [Week 8 · Chromagrams](./notes/compmus2023-w08.html)
 
 This storyboard contains further examples from each week to inspire you. You can download the raw source code of the storyboard [here](./index.Rmd).
 
@@ -157,3 +159,83 @@ ggplotly(february_dip)
 
 In March 2019, [The Economist](https://www.economist.com/graphic-detail/2020/02/08/data-from-spotify-suggest-that-listeners-are-gloomiest-in-february?fsrc=scn/fb/te/bl/ed/sadsongssaysomuchdatafromspotifysuggestthatlistenersaregloomiestinfebruarygraphicdetail) published a graphic showing a worldwide dip in the emotional valence of the music to people people listen around February each year. The graphic also broke down the emotional valence for every month of the year for a selection of Spotify markets, and it revealed quite a surprise: although overall, there seemed to be two large groups, with Latin America and Spain listening to more positively valenced music than most of the rest of the world, the Netherlands stood on its own somewhere in between these two extremes. This graphic compares Spotify Top 50 in the Netherlands against Belgium, a more typical neighbouring country, as well as the worldwide average, on the standard valence--arousal model. More popular songs (worldwide) have larger dots; more danceable songs are yellow.
 
+### The Tallis Scholars sing Josquin more slowly than La Chapelle Royale -- except for one part [chroma features].
+
+```{r tallis}
+tallis <-
+  get_tidy_audio_analysis("2J3Mmybwue0jyQ0UVMYurH") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+chapelle <-
+  get_tidy_audio_analysis("4ccw2IcnFt1Jv9LqQCOYDi") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+maria_dist <-
+  compmus_long_distance(
+    tallis %>% mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
+    chapelle %>% mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
+    feature = pitches,
+    method = "aitchison"
+  )
+```
+
+```{r tallis-plot}
+maria <-
+  maria_dist %>%
+  mutate(
+    tallis = xstart + xduration / 2,
+    chapelle = ystart + yduration / 2
+  ) %>%
+  ggplot(
+    aes(
+      x = tallis,
+      y = chapelle,
+      fill = d
+    )
+  ) +
+  geom_tile(aes(width = xduration, height = yduration)) +
+  coord_fixed() +
+  scale_x_continuous(
+    breaks = c(0, 60, 105, 150, 185, 220, 280, 327),
+    labels =
+      c(
+        "Ave Maria",
+        "Ave cujus conceptio",
+        "Ave cujus nativitas",
+        "Ave pia humilitas",
+        "Ave vera virginitas",
+        "Ave preclara omnibus",
+        "O Mater Dei",
+        ""
+      ),
+  ) +
+  scale_y_continuous(
+    breaks = c(0, 45, 80, 120, 145, 185, 240, 287),
+    labels =
+      c(
+        "Ave Maria",
+        "Ave cujus conceptio",
+        "Ave cujus nativitas",
+        "Ave pia humilitas",
+        "Ave vera virginitas",
+        "Ave preclara omnibus",
+        "O Mater Dei",
+        ""
+      ),
+  ) +
+  scale_fill_viridis_c(option = "E", guide = "none") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
+  labs(x = "The Tallis Scholars", y = "La Chapelle Royale")
+maria
+```
+
+***
+
+This visualisation of two performances of the famous ‘Ave Maria’ setting of Josquin des Prez uses the Aitchison distance between chroma features to show how the two performances align with one another. 
+
+For the first four stanzas, the relationship between the performances is consistent: the Tallis Scholars sing the piece somewhat more slowly than La Chapelle Royale. For the fifth stanza (*Ave vera virginitas*, starting about 3:05 into the Tallis Scholars’ performance and 2:25 into La Chapelle Royale’s), the Tallis Scholars singing faster than La Chapelle Royale, but at the beginning of the sixth stanza (*Ave preclara omnibus*, starting about 3:40 into the the Tallis Scholars’ performance and 3:05 into La Chapelle Royale’s) the Tallis Scholars return to their regular tempo relationship with La Chapelle.
+
+Although the interactive mouse-overs from `ggplotly` are very helpful for understanding heat maps, they are very computationally intensive. Chromagrams and similarity matrices are often better as static images, like the visualisation at left.
