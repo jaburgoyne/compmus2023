@@ -714,9 +714,9 @@ case, <code>segments</code> – and then <code>unnest</code> it.</p>
 week, we’ll focus just on <code>start</code>, <code>duration</code>, and
 <code>pitches</code>: the three tools we need to make a chromagram.</p>
 <pre class="r"><code>wood &lt;-
-  get_tidy_audio_analysis(&quot;6IQILcYkN2S2eSu5IHoPEH&quot;) %&gt;%
-  select(segments) %&gt;%
-  unnest(segments) %&gt;%
+  get_tidy_audio_analysis(&quot;6IQILcYkN2S2eSu5IHoPEH&quot;) |&gt;
+  select(segments) |&gt;
+  unnest(segments) |&gt;
   select(start, duration, pitches)</code></pre>
 <p>The key to making a chromagram is <code>geom_tile()</code>. It is
 powerful but has it’s wrinkles. Much of the code in the next block is
@@ -737,9 +737,9 @@ tile on the <em>x</em> or <em>y</em> coordinate instead of using the
 left corner. Use the duration to make a correction for it.</p>
 <p>I’ve added labels, a simpler theme, and a scientific colour scheme to
 make the plot look a little nicer.</p>
-<pre class="r"><code>wood %&gt;%
-  mutate(pitches = map(pitches, compmus_normalise, &quot;euclidean&quot;)) %&gt;%
-  compmus_gather_chroma() %&gt;% 
+<pre class="r"><code>wood |&gt;
+  mutate(pitches = map(pitches, compmus_normalise, &quot;euclidean&quot;)) |&gt;
+  compmus_gather_chroma() |&gt; 
   ggplot(
     aes(
       x = start + duration / 2,
@@ -826,49 +826,49 @@ blank lines separate performances at three different pitch levels
 (transpositions).</p>
 <pre class="r"><code>## The Tallis Scholars
 tallis &lt;-
-  get_tidy_audio_analysis(&quot;2J3Mmybwue0jyQ0UVMYurH&quot;) %&gt;%
-  select(segments) %&gt;%
-  unnest(segments) %&gt;%
+  get_tidy_audio_analysis(&quot;2J3Mmybwue0jyQ0UVMYurH&quot;) |&gt;
+  select(segments) |&gt;
+  unnest(segments) |&gt;
   select(start, duration, pitches)
 ## La Chapelle Royale
 chapelle &lt;-
-  get_tidy_audio_analysis(&quot;4ccw2IcnFt1Jv9LqQCOYDi&quot;) %&gt;%
-  select(segments) %&gt;%
-  unnest(segments) %&gt;%
+  get_tidy_audio_analysis(&quot;4ccw2IcnFt1Jv9LqQCOYDi&quot;) |&gt;
+  select(segments) |&gt;
+  unnest(segments) |&gt;
   select(start, duration, pitches)
 ## The Cambridge Singers
 cambridge &lt;-
-  get_tidy_audio_analysis(&quot;54cAT1TCFaZbLOB2i1y61h&quot;) %&gt;%
-  select(segments) %&gt;%
-  unnest(segments) %&gt;%
+  get_tidy_audio_analysis(&quot;54cAT1TCFaZbLOB2i1y61h&quot;) |&gt;
+  select(segments) |&gt;
+  unnest(segments) |&gt;
   select(start, duration, pitches)
 
 
 ## Oxford Camerata
 oxford &lt;-
-  get_tidy_audio_analysis(&quot;5QyUsMY40MQ1VebZXSaonU&quot;) %&gt;%
-  select(segments) %&gt;%
-  unnest(segments) %&gt;%
+  get_tidy_audio_analysis(&quot;5QyUsMY40MQ1VebZXSaonU&quot;) |&gt;
+  select(segments) |&gt;
+  unnest(segments) |&gt;
   select(start, duration, pitches)
 ## Chanticleer
 chanticleer &lt;-
-  get_tidy_audio_analysis(&quot;1bocG1N8LM7MSgj9T1n3XH&quot;) %&gt;%
-  select(segments) %&gt;%
-  unnest(segments) %&gt;%
+  get_tidy_audio_analysis(&quot;1bocG1N8LM7MSgj9T1n3XH&quot;) |&gt;
+  select(segments) |&gt;
+  unnest(segments) |&gt;
   select(start, duration, pitches)
 
 
 ## The Hilliard Ensemble
 hilliard &lt;-
-  get_tidy_audio_analysis(&quot;2rXEyq50luqaFNC9DkcU6k&quot;) %&gt;%
-  select(segments) %&gt;%
-  unnest(segments) %&gt;%
+  get_tidy_audio_analysis(&quot;2rXEyq50luqaFNC9DkcU6k&quot;) |&gt;
+  select(segments) |&gt;
+  unnest(segments) |&gt;
   select(start, duration, pitches)
 ## The Gabrieli Consort
 gabrieli &lt;-
-  get_tidy_audio_analysis(&quot;4NnJ4Jes8a8mQUfXhwuITx&quot;) %&gt;%
-  select(segments) %&gt;%
-  unnest(segments) %&gt;%
+  get_tidy_audio_analysis(&quot;4NnJ4Jes8a8mQUfXhwuITx&quot;) |&gt;
+  select(segments) |&gt;
+  unnest(segments) |&gt;
   select(start, duration, pitches)</code></pre>
 <p>The <code>compmus_long_distance()</code> helper function gets
 everything ready to plot the distances between the chroma vectors in two
@@ -879,11 +879,11 @@ the table above. It returns a long table ready for plotting, with
 <code>xstart</code>, <code>xduration</code>, <code>ystart</code>, and
 <code>yduration</code>.</p>
 <pre class="r"><code>compmus_long_distance(
-  tallis %&gt;% mutate(pitches = map(pitches, compmus_normalise, &quot;chebyshev&quot;)),
-  chapelle %&gt;% mutate(pitches = map(pitches, compmus_normalise, &quot;chebyshev&quot;)),
+  tallis |&gt; mutate(pitches = map(pitches, compmus_normalise, &quot;chebyshev&quot;)),
+  chapelle |&gt; mutate(pitches = map(pitches, compmus_normalise, &quot;chebyshev&quot;)),
   feature = pitches,
   method = &quot;euclidean&quot;
-) %&gt;%
+) |&gt;
   ggplot(
     aes(
       x = xstart + xduration / 2,
