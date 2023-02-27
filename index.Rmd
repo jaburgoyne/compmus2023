@@ -9,6 +9,8 @@ output:
       version: 4
       bootswatch: litera
     self_contained: false
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, setup}
@@ -16,6 +18,7 @@ library(tidyverse)
 library(plotly)
 library(spotifyr)
 library(compmus)
+library(cowplot)
 ```
 
 ### Welcome to Computational Musicology 2023!
@@ -239,3 +242,101 @@ This visualisation of two performances of the famous ‘Ave Maria’ setting of 
 For the first four stanzas, the relationship between the performances is consistent: the Tallis Scholars sing the piece somewhat more slowly than La Chapelle Royale. For the fifth stanza (*Ave vera virginitas*, starting about 3:05 into the Tallis Scholars’ performance and 2:25 into La Chapelle Royale’s), the Tallis Scholars singing faster than La Chapelle Royale, but at the beginning of the sixth stanza (*Ave preclara omnibus*, starting about 3:40 into the the Tallis Scholars’ performance and 3:05 into La Chapelle Royale’s) the Tallis Scholars return to their regular tempo relationship with La Chapelle.
 
 Although the interactive mouse-overs from `ggplotly` are very helpful for understanding heat maps, they are very computationally intensive. Chromagrams and similarity matrices are often better as static images, like the visualisation at left.
+
+### Vizualizing More Chroma 
+
+```{r pop-chroma}
+
+ewf <-
+  get_tidy_audio_analysis("3cfnGXJ9bmiWvFqEO6ff8B?si=fc8b75cc5a254be0") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+loveontop <-
+  get_tidy_audio_analysis("1z6WtY7X4HQJvzxC4UgkSf?si=498f16c4cea74323") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+allineed <-
+  get_tidy_audio_analysis("164VgxTozx99XCinCB9ITR?si=797ce93143424c36") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+
+```
+
+```{r pop-chroma-plots}
+
+ewf_plot <- ewf %>%
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
+  compmus_gather_chroma() %>% 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+    geom_vline(xintercept = 53, color = "red") +
+
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "After the Love Has Gone (Earth, Wind, and Fire)") +
+  theme_minimal() +
+  scale_fill_viridis_c() 
+
+
+loveontop_plot <- loveontop %>%
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
+  compmus_gather_chroma() %>% 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  geom_vline(xintercept = 184, color = "red") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Love On Top (Beyonce)") +
+  theme_minimal() +
+  scale_fill_viridis_c() 
+
+
+allineed_plot <- allineed %>%
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
+  compmus_gather_chroma() %>% 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  geom_vline(xintercept = 137, color = "red") +
+  geom_vline(xintercept = 186, color = "red") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "All I Need (Collier, Mahalia, Ty Dolla $ign)") +
+  theme_minimal() +
+  scale_fill_viridis_c() 
+
+
+plot_grid(ewf_plot, loveontop_plot, allineed_plot, ncol = 1)
+
+```
+
+***
+
+Chroma can be a difficult concept to grasp, especially for those without musical training. The three charts on this page visualize three pop tunes that might help make this clearer.
+
+The first plot shows a recording of [Earth Wind and Fire's After the Love is Gone](https://open.spotify.com/track/3cfnGXJ9bmiWvFqEO6ff8B?si=55c53dd6dfc643c6), which begins in [F Major, then modulates down to E major using a chord that is a tritone away](https://www.youtube.com/watch?v=ZBpV-n10sfo) at 0:55 seconds. Note how at that moment on the spectrogram-- marked in red-- a clear concentration of energy away from F over to B!  
+
+The second plot shows Beyonce's [Love on Top](https://open.spotify.com/track/1z6WtY7X4HQJvzxC4UgkSf?si=ad690f7ecc594205). The tune is in a singular key for the first 2/3rd's of the song, but then at around 3:04 (184 seconds) the music modulates upwards each repeat of the chorus. Note here that the the chromagram is capturing the fact that the pitch classes are going up, though her voice is also singing higher (her tessitura!). Make sure not to confuse pitch height with chroma or pitch class! 
+
+The last plot shows the tune [All I Need](https://open.spotify.com/track/164VgxTozx99XCinCB9ITR?si=612e1f79f92b4c23), which also has a modulation, but interestingly moves from [Eb Major](https://youtube.com/watch?v=Dv9iaRJG2Yc&si=EnSIkaIECMiOmarE&t=128) to what is essentially [Bb half sharp in standard tuning (A4 = ~452.89 according to this transcription!)](https://youtube.com/watch?v=Dv9iaRJG2Yc&si=EnSIkaIECMiOmarE&t=128). This point is highlighted by the red lines on the chromagram and notice that since this "key" does not fit that well into A440, the relative magnitute of the pitches that were quite prominent (Bb + F) are not really replaced by any other pitches!
+
