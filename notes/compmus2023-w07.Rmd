@@ -5,9 +5,7 @@ date: "15 February 2023"
 output: 
   html_document:
     toc: true
-    theme:
-      version: 4
-      bootswatch: litera
+    theme: journal
 ---
 
 You can download the raw source code for these lecture notes [here](compmus2023-w07.Rmd).

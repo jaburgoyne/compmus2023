@@ -1,0 +1,219 @@
+---
+title: "Week 9 · Structure Analysis · Self-Similarity Matrices"
+author: "John Ashley Burgoyne"
+date: "1 March 2023"
+output:
+  html_document:
+    toc: true
+    theme: journal
+---
+
+You can download the raw source code for these lecture notes [here](compmus2022-w09.Rmd).
+
+## Course Meeting Plan
+
+### Wednesday · 1 March · Lecture
+
+  - Demo: [The Eternal Jukebox](https://eternalbox.dev/jukebox_go.html?id=5ZLkc5RY1NM4FtGWEd6HOE) (15 min)
+  - Portfolio critiques (15 min)
+  - Lecture: Self-similarity matrices (15 min)
+  - Lecture: MFCCs and Spotify's timbre feature (20 min)
+  - Breakout: Avril 14 (15 min)
+  - Discussion: Breakout findings (10 min)
+
+
+### Wednesday · 2 March · Lab
+
+  - Demo: Introduction to new compmus functions (15 mins)
+  - Breakout: Interpreting timbre features (or not) (20 mins)
+  - Discussion: Breakout findings (10 mins)
+  - Demo: Self-similarity matrices with compmus (10 mins)
+  - Breakout: Self-similarity matrices (20 mins)
+  - Jam session: Breakout findings (15 mins)
+
+## Breakout 1: Avril 14
+
+Below, you can see two self-similarity matrices for [Aphex Twin's 'Avril 14th'](https://open.spotify.com/track/2MZSXhq4XDJWu6coGoXX1V).
+Listen to the piece together and try to explain the patterns you see in the matrices. 
+
+```{r, echo = FALSE, message = FALSE}
+library(tidyverse)
+library(spotifyr)
+library(compmus)
+maria <-
+  get_tidy_audio_analysis("2MZSXhq4XDJWu6coGoXX1V") |>
+  compmus_align(bars, segments) |>
+  select(bars) |>
+  unnest(bars) |>
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "acentre", norm = "manhattan"
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  )
+bind_rows(
+  maria |>
+    compmus_self_similarity(pitches, "aitchison") |>
+    mutate(d = d / max(d), type = "Chroma"),
+  maria |>
+    compmus_self_similarity(timbre, "euclidean") |>
+    mutate(d = d / max(d), type = "Timbre")
+) |>
+  mutate() |>
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  facet_wrap(~type) +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "", y = "")
+```
+
+
+## Breakout 2: Cepstrograms
+
+```{r setup, message = FALSE}
+library(tidyverse)
+library(spotifyr)
+library(compmus)
+```
+
+Last week, we used several custom functions from to work with the Spotify API:
+
+  - `get_tidy_audio_analysis` to load audio analyses from Spotify, one track at a time
+  - `compmus_normalise` to normalise audio features using common techniques, including:
+      - `manhattan`
+      - `euclidean`
+      - `chebyshev`
+  - `compmus_long_distance` to compare to series of audio features against each other using common distance metrics, including:
+      - `manhattan`
+      - `aitchison`
+      - `euclidean`
+      - `cosine`
+      - `angular`
+  
+This week, we will use a few new custom functions. 
+
+  - `compmus_align` aligns two levels of structure with each other, e.g., Spotify segments with
+      - `sections`
+      - `bars`
+      - `beats` 
+      - `tatums`
+  - `compmus_summarise` helps to summarise features within higher levels of structure, including:
+      - `mean`
+      - `acentre` [Aitchison centre, for use with chroma or Aitchison distances]
+      - `rms` [root mean square]
+      - `max`
+
+### Common Norm, Distance, and Summary Combinations
+
+| Domain                      | Normalisation | Distance  | Summary Statistic |
+| ----------------------------|---------------|-----------|-------------------|
+| Non-negative (e.g., chroma) | Manhattan     | Manhattan | mean              |
+|                             |               | Aitchison | Aitchison centre  |
+|                             | Euclidean     | cosine    | root mean square  |
+|                             |               | angular   | root mean square  |
+|                             | Chebyshev     | [none]    | max               |
+| Full-range (e.g., timbre)   | [none]        | Euclidean | mean              |
+|                             | Euclidean     | cosine    | root mean square  |
+|                             |               | angular   | root mean square  |
+
+
+### 'Bloed, Zweet en Tranen'
+
+The following examples from Andre Hazes's ‘Bloed, Zweet en Tranen’ highlight how to use these functions. If you are following your DataCamp exercises carefully and are looking to develop more advanced R skills, notice the use of the `purrr:map()` function here. But you can also use this code as a template: the lines you need to change to make your own cepstrograms are marked.
+
+```{r}
+bzt <-
+  get_tidy_audio_analysis("5ZLkc5RY1NM4FtGWEd6HOE") |> # Change URI.
+  compmus_align(bars, segments) |>                     # Change `bars`
+  select(bars) |>                                      #   in all three
+  unnest(bars) |>                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+```
+
+We can use `compmus_gather_timbre` much like `compmus_gather_chroma` last week to yield a cepstrogram. This code should work as a template for you with no changes necessary. 
+
+```{r}
+bzt |>
+  compmus_gather_timbre() |>
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = basis,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude") +
+  scale_fill_viridis_c() +                              
+  theme_classic()
+```
+
+### Instructions
+
+1. Try different levels of summarisation: section, bar, beat, and tatum. Which one seems to be the 'sweet spot' where patterns are most visible?
+
+2. Try different combinations of norms, distances, and summary statistics. Which seem to give the clearest visualisation?
+  
+3. Once you are happy with your choices in steps 1 and 2, make cepstrograms for several other tracks from André Hazes, and look for timbre components where there are clear changes (e.g., c02 in 'Bloed, Zweet en Tranen'). Listen to these tracks and follow along with the cepstrograms. Can you think of words to describe what is changing in the music when you see sharp changes in the cepstrogram? Could you give any of Spotify's timbre components a name?
+
+
+## Breakout 3: Self-Similarity Matrices
+
+The function `compmus_self_similarity` is a wrapper around `compmus_long_distance` from last week, for the case where the distances are computed form the same track. 
+
+```{r}
+bzt |>
+  compmus_self_similarity(timbre, "cosine") |> 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "", y = "")
+```
+
+### Instructions
+
+1. Try different distance metrics to see which one is most useful for this track.
+2. Make another self-similarity matrix based on chroma (`pitches`). Adjust your summary and norm (from the `pitches` line of the previous breakout), as well as the distance metric, to get the best visualisation.
+3. Once you are happy with your settings in steps 1 and 2, make self-similarity matrices for the Hazes tracks you used in the previous breakout. How can you explain the patterns you see?

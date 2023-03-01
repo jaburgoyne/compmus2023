@@ -5,12 +5,8 @@ date: "Block 4"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
-    theme:
-      version: 4
-      bootswatch: litera
+    theme: journal
     self_contained: false
-editor_options: 
-  chunk_output_type: console
 ---
 
 ```{r, setup}
@@ -29,6 +25,7 @@ You can access the lecture notes at the following links.
 
   - [Week 7 · Computational Musicology and (Audio) Visualisation](./notes/compmus2023-w07.html)
   - [Week 8 · Chromagrams](./notes/compmus2023-w08.html)
+  - [Week 9 · Cepstrograms and Self-Similarity Matrices](./notes/compmus2023-w09.html)
 
 This storyboard contains further examples from each week to inspire you. You can download the raw source code of the storyboard [here](./index.Rmd).
 
@@ -167,21 +164,21 @@ In March 2019, [The Economist](https://www.economist.com/graphic-detail/2020/02/
 ```{r pop-chroma}
 
 ewf <-
-  get_tidy_audio_analysis("3cfnGXJ9bmiWvFqEO6ff8B?si=fc8b75cc5a254be0") %>%
-  select(segments) %>%
-  unnest(segments) %>%
+  get_tidy_audio_analysis("3cfnGXJ9bmiWvFqEO6ff8B?si=fc8b75cc5a254be0") |>
+  select(segments) |>
+  unnest(segments) |>
   select(start, duration, pitches)
 
 loveontop <-
-  get_tidy_audio_analysis("1z6WtY7X4HQJvzxC4UgkSf?si=498f16c4cea74323") %>%
-  select(segments) %>%
-  unnest(segments) %>%
+  get_tidy_audio_analysis("1z6WtY7X4HQJvzxC4UgkSf?si=498f16c4cea74323") |>
+  select(segments) |>
+  unnest(segments) |>
   select(start, duration, pitches)
 
 allineed <-
-  get_tidy_audio_analysis("164VgxTozx99XCinCB9ITR?si=797ce93143424c36") %>%
-  select(segments) %>%
-  unnest(segments) %>%
+  get_tidy_audio_analysis("164VgxTozx99XCinCB9ITR?si=797ce93143424c36") |>
+  select(segments) |>
+  unnest(segments) |>
   select(start, duration, pitches)
 
 
@@ -189,9 +186,9 @@ allineed <-
 
 ```{r pop-chroma-plots}
 
-ewf_plot <- ewf %>%
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
-  compmus_gather_chroma() %>% 
+ewf_plot <- ewf |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma() |> 
   ggplot(
     aes(
       x = start + duration / 2,
@@ -208,9 +205,9 @@ ewf_plot <- ewf %>%
   scale_fill_viridis_c() 
 
 
-loveontop_plot <- loveontop %>%
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
-  compmus_gather_chroma() %>% 
+loveontop_plot <- loveontop |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma() |> 
   ggplot(
     aes(
       x = start + duration / 2,
@@ -226,9 +223,9 @@ loveontop_plot <- loveontop %>%
   scale_fill_viridis_c() 
 
 
-allineed_plot <- allineed %>%
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
-  compmus_gather_chroma() %>% 
+allineed_plot <- allineed |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma() |> 
   ggplot(
     aes(
       x = start + duration / 2,
@@ -263,19 +260,19 @@ The last plot shows the tune [All I Need](https://open.spotify.com/track/164VgxT
 
 ```{r tallis}
 tallis <-
-  get_tidy_audio_analysis("2J3Mmybwue0jyQ0UVMYurH") %>%
-  select(segments) %>%
-  unnest(segments) %>%
+  get_tidy_audio_analysis("2J3Mmybwue0jyQ0UVMYurH") |>
+  select(segments) |>
+  unnest(segments) |>
   select(start, duration, pitches)
 chapelle <-
-  get_tidy_audio_analysis("4ccw2IcnFt1Jv9LqQCOYDi") %>%
-  select(segments) %>%
-  unnest(segments) %>%
+  get_tidy_audio_analysis("4ccw2IcnFt1Jv9LqQCOYDi") |>
+  select(segments) |>
+  unnest(segments) |>
   select(start, duration, pitches)
 maria_dist <-
   compmus_long_distance(
-    tallis %>% mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
-    chapelle %>% mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
+    tallis |> mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
+    chapelle |> mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
     feature = pitches,
     method = "aitchison"
   )
@@ -283,11 +280,11 @@ maria_dist <-
 
 ```{r tallis-plot}
 maria <-
-  maria_dist %>%
+  maria_dist |>
   mutate(
     tallis = xstart + xduration / 2,
     chapelle = ystart + yduration / 2
-  ) %>%
+  ) |>
   ggplot(
     aes(
       x = tallis,
@@ -339,3 +336,55 @@ This visualisation of two performances of the famous ‘Ave Maria’ setting of 
 For the first four stanzas, the relationship between the performances is consistent: the Tallis Scholars sing the piece somewhat more slowly than La Chapelle Royale. For the fifth stanza (*Ave vera virginitas*, starting about 3:05 into the Tallis Scholars’ performance and 2:25 into La Chapelle Royale’s), the Tallis Scholars singing faster than La Chapelle Royale, but at the beginning of the sixth stanza (*Ave preclara omnibus*, starting about 3:40 into the the Tallis Scholars’ performance and 3:05 into La Chapelle Royale’s) the Tallis Scholars return to their regular tempo relationship with La Chapelle.
 
 Although the interactive mouse-overs from `ggplotly` are very helpful for understanding heat maps, they are very computationally intensive. Chromagrams and similarity matrices are often better as static images, like the visualisation at left.
+
+### What is the structure of ‘Blood, Sweat, and Tears’ [chroma and timbre features]
+
+```{r hazes}
+bzt <-
+  get_tidy_audio_analysis("5ZLkc5RY1NM4FtGWEd6HOE") |>
+  compmus_align(bars, segments) |>
+  select(bars) |>
+  unnest(bars) |>
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "acentre", norm = "manhattan"
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  )
+bind_rows(
+  bzt |> 
+    compmus_self_similarity(pitches, "aitchison") |> 
+    mutate(d = d / max(d), type = "Chroma"),
+  bzt |> 
+    compmus_self_similarity(timbre, "euclidean") |> 
+    mutate(d = d / max(d), type = "Timbre")
+) |>
+  mutate() |> 
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  facet_wrap(~type) +
+  scale_fill_viridis_c(option = "E", guide = "none") +
+  theme_classic() + 
+  labs(x = "", y = "")
+```
+
+***
+
+The two self-similarity matrices at the right, each summarised at the bar level but with axes in seconds, illustrate pitch- and timbre-based self-similarity within Andre Hazes's famous ‘Bloed, Zweet en Tranen’ (2002). Both are necessary to understand the structure of the song. The chroma-based matrix picks up the five presentations of the chorus very clearly but mostly misses the poignant changes in texture during the three verses. These changes are very visible in the timbre-based matrix, especially the third verse. The timbre-based matrix also illustrates the unbalanced song structure, climaxing about halfway through and thereafter simply repeating the chorus until the fade-out. The closing guitar solo is faintly visible in the top-right corner.
