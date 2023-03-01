@@ -24,7 +24,7 @@ You can download the raw source code for these lecture notes [here](compmus2023-
 
 If you want some distraction *after* the lecture, have a look at the [Sources of Good Data Visualisations](https://canvas.uva.nl/courses/37009/pages/sources-of-sometimes-good-data-visualisations?module_item_id=1523431) on Canvas.
 
-### Wednesday · 16 February · Lab
+### Wednesday · 15 February · Lab
 
 If you have time before this lab, [try to connect your portfolio to Spotify](https://canvas.uva.nl/courses/37009/pages/connecting-your-portfolio-to-spotify?module_item_id=1523448). If you get stuck, your TA will help you during the lab session.
 

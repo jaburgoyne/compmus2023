@@ -8,7 +8,7 @@ output:
     theme: journal
 ---
 
-You can download the raw source code for these lecture notes [here](compmus2022-w09.Rmd).
+You can download the raw source code for these lecture notes [here](compmus2023-w09.Rmd).
 
 ## Course Meeting Plan
 
@@ -22,7 +22,7 @@ You can download the raw source code for these lecture notes [here](compmus2022-
   - Discussion: Breakout findings (10 min)
 
 
-### Wednesday · 2 March · Lab
+### Wednesday · 1 March · Lab
 
   - Demo: Introduction to new compmus functions (15 mins)
   - Breakout: Interpreting timbre features (or not) (20 mins)
