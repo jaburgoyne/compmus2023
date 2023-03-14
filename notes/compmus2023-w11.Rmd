@@ -1,0 +1,262 @@
+---
+title: "Week 11 · Novelty Functions and Tempograms"
+author: "John Ashley Burgoyne"
+date: "15 March 2023"
+output: 
+  html_document:
+    toc: true
+    theme: journal
+---
+
+You can download the raw source code for these lecture notes [here](compmus2023-w11.Rmd).
+
+## Course Meeting Plan
+
+### Wednesday · 15 March · Lecture
+
+  - Lecture: Onset detection (15 mins)
+  - Breakout: Energy or spectrum? (15 mins)
+  - Discussion: Breakout findings (5 mins)
+  - Demo: Beat tracking (15 mins)
+  - Lecture: Tempo estimation (15 mins)
+  - Discussion: Preferred tempo (10 mins)
+  - Portfolio critiques (15 min)
+  
+### Wednesday · 15 March · Novelty Functions
+
+  - Demo: Novelty functions in Spotify (15 mins)
+  - Breakout: Novelty functions (20 mins)
+  - Discussion: Breakout findings (10 mins)
+  - Demo: Tempograms in Spotify (15 mins)
+  - Breakout: Tempograms (20 mins)
+  - Discussion: Breakout findings (10 mins)
+
+## Set-up
+
+```{r, results = 'hide'}
+library(tidyverse)
+library(spotifyr)
+library(compmus)
+```
+
+## Breakout 1: Energy or Spectrum?
+
+Look at one (or more) of the self-similarity matrices from somebody's portfolio in your group. Discuss what you think a spectrum-based novelty function would look like for this track. Listen to (some of) the track and also discussion what you think an energy-based novelty function would look like. Which one do you think would be most useful for beat tracking, and why? 
+
+## Breakout 2: Novelty Functions
+
+For novelty functions, we want to work directly with the segments, and not summarise them at higher levels like Spotify's own estimates of bar or beat.
+
+```{r}
+pata_pata <-
+  get_tidy_audio_analysis("3uy90vHHATPjtdilshDQDt") |>
+  select(segments) |>
+  unnest(segments)
+```
+
+We can compute an energy-based novelty function based on Spotify's loudness estimates. The tempo of this piece is about 126 BPM: how well does this technique work?
+
+```{r}
+pata_pata |>
+  mutate(loudness_max_time = start + loudness_max_time) |>
+  arrange(loudness_max_time) |>
+  mutate(delta_loudness = loudness_max - lag(loudness_max)) |>
+  ggplot(aes(x = loudness_max_time, y = pmax(0, delta_loudness))) +
+  geom_line() +
+  xlim(0, 30) +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Novelty")
+```
+
+We can use similar approaches for chromagrams and cepstrograms. In the case of chromagrams, Aitchison's clr transformation gives more sensible differences between time points than other normalisations. Even with these helpful transformations, however, self-similarity matrices tend to be more helpful visualisations of chroma and timbre from the Spotify API.
+
+```{r}
+pata_pata |>
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
+  arrange(start) |>
+  mutate(pitches = map2(pitches, lag(pitches), `-`)) |>
+  slice(-1) |> 
+  compmus_gather_chroma() |> 
+  group_by(start, duration) |> 
+  summarise(novelty = sum(log1p(pmax(value, 0)))) |> 
+  ggplot(aes(x = start + duration / 2, y = novelty)) +
+  geom_line() +
+  xlim(0, 30) +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Novelty")
+```
+
+```{r}
+pata_pata |>
+  arrange(start) |>
+  mutate(timbre = map2(timbre, lag(timbre), `-`)) |>
+  slice(-1) |>
+  compmus_gather_timbre() |>
+  group_by(start, duration) |> 
+  summarise(novelty = sum(log1p(pmax(value, 0)))) |> 
+  ggplot(aes(x = start + duration / 2, y = novelty)) +
+  geom_line() +
+  xlim(0, 30) +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "Novelty")
+```
+
+
+### Instructions
+
+Listen to the first 30 seconds of 'Pata Pata' and discuss the three representations above. Do *any* of them seem useful?
+
+Find a Spotify track that has a regular tempo but lacks percussion (e.g., much Western classical music), and compute the above three representations. (Change the `xlim()` line if you want to look at a different portion of your track.) How do they differ from what you see for 'Pata Pata'? Be prepared to show your best 'novelty-gram' to the class.
+
+## Breakout 3: Tempograms
+
+Spotify does not make the novelty function underlying their own tempo analysis available to the public, but we can still use onsets of every segment to generate Fourier tempograms. The `tempogram()` function from `compmus` generates this automatically from an audio analysis, ready to plot with `geom_raster` (a faster version of `geom_tile` for when every segment has the same length). Here is an example of 'Samba do outro lugar', a track from the Brazilian indie band Graveola that features several tempo and metre alternations. Be warned that computing tempograms can be slow!
+
+```{r}
+graveola <- get_tidy_audio_analysis("6PJasPKAzNLSOzxeAH33j2")
+```
+
+```{r}
+graveola |>
+  tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+The textbook notes that Fourier-based tempograms tend to pick up strongly on tempo harmonics. Wrapping into a cyclic tempogram can be more informative. 
+
+```{r}
+graveola |>
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+### Instructions
+
+Return to the track you discussed in Breakout 1 (or choose a new track that somebody in your group loves). Compute regular and cyclic tempograms for this track. 
+  - How well do they work? 
+  - Do you see more tempo harmonics or more tempo *sub*-harmonics? Is that what you expected? Why?
+  - Try other tracks as time permits, and be prepared to share your most interesting tempogram with the class.
+
+## Optional Self-Study Material: Deltas and Delta-Deltas for Playlists
+
+Let's try to identify some of the features that Spotify uses to designate playlists as 'workout' playlists. For a full analysis, we would need to delve deeper, but let's start with a comparison of three playlists: Indie Pop, Indie Party, and Indie Running For speed, this example will work with only the first 20 songs from each playlist, but you should feel free to use more if your computer can handle it.
+
+```{r}
+pop <-
+  get_playlist_audio_features("spotify", "37i9dQZF1DWWEcRhUVtL8n") |>
+  slice(1:20) |>
+  add_audio_analysis()
+party <-
+  get_playlist_audio_features("spotify", "37i9dQZF1DWTujiC7wfofZ") |>
+  slice(1:20) |>
+  add_audio_analysis()
+workout <-
+  get_playlist_audio_features("spotify", "37i9dQZF1DWZq91oLsHZvy") |>
+  slice(1:20) |>
+  add_audio_analysis()
+```
+
+We bind the three playlists together using the trick from earlier in the course, transpose the chroma vectors to a common tonic using the `compmus_c_transpose` function, and then summarise the vectors like we did when generating chromagrams and cepstrograms. Again, Aitchison's clr transformation can help with chroma.
+
+```{r}
+indie <-
+  bind_rows(
+    pop |> mutate(playlist = "Indie Pop"),
+    party |> mutate(playlist = "Indie Party"),
+    workout |> mutate(playlist = "Indie Workout")
+  ) |>
+  mutate(playlist = factor(playlist)) |>
+  mutate(
+    segments =
+      map2(segments, key, compmus_c_transpose)
+  ) |>
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  ) |>
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
+  mutate_at(vars(pitches, timbre), map, bind_rows) |>
+  unnest(cols = c(pitches, timbre))
+```
+
+Although the novelty-based transformations of chroma and timbre features are not always useful for visualisations, they can be very useful for classification (next week). Both 'deltas' and 'delta-deltas', especially for timbre features, are in regular use in music information retrieval. The code example below shows how to compute average *delta* chroma and timbre features instead of the ordinary average. Can you add delta-deltas, too? Can you use a visualisation to find any patterns in the data?
+
+```{r}
+indie_deltas <-
+  pop |>
+  mutate(playlist = "Indie Pop") |>
+  bind_rows(
+    party |> mutate(playlist = "Indie Party"),
+    workout |> mutate(playlist = "Indie Workout")
+  ) |>
+  mutate(playlist = factor(playlist)) |>
+  mutate(
+    segments =
+      map2(segments, key, compmus_c_transpose)
+  ) |>
+  mutate(
+    segments =
+      map(
+        segments,
+        mutate,
+        pitches = map(pitches, compmus_normalise, "manhattan")
+      )
+  ) |>
+  mutate(
+    segments =
+      map(
+        segments,
+        mutate,
+        pitches = map2(pitches, lag(pitches), `-`)
+      )
+  ) |>
+  mutate(
+    segments =
+      map(
+        segments,
+        mutate,
+        timbre = map2(timbre, lag(timbre), `-`)
+      )
+  ) |>
+  mutate(
+    segments =
+      map(
+        segments,
+        slice,
+        -1
+      )
+  ) |>
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", na.rm = TRUE
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean", na.rm = TRUE
+      )
+  ) |>
+  mutate_at(vars(pitches, timbre), map, bind_rows) |>
+  unnest(cols = c(pitches, timbre))
+indie_deltas
+```

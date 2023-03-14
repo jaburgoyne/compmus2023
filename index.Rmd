@@ -27,6 +27,7 @@ You can access the lecture notes at the following links.
   - [Week 8 · Chromagrams](./notes/compmus2023-w08.html)
   - [Week 9 · Cepstrograms and Self-Similarity Matrices](./notes/compmus2023-w09.html)
   - [Week 10 · Chordograms and Keygrams](./notes/compmus2023-w10.html)
+  - [Week 11 · Novelty Functions and Tempograms](./notes/compmus2023-w11.html)
 
 This storyboard contains further examples from each week to inspire you. You can download the raw source code of the storyboard [here](./index.Rmd).
 
@@ -456,3 +457,19 @@ get_tidy_audio_analysis("5UVsbUV0Kh033cqsZ5sLQi") |>
 The keygram at the left shows the two modulations in Zager and Evans's 'In the Year 2525' (1969). The piece is segmented according to Spotify's estimates, and the distances represented are Aitchison distances from Spotify's chroma vectors to the original Krumhansl--Kessler key profiles (1990). 
 
 The piece does not follow common-era tonal conventions, and the key estimates are blurry. The move from G$\sharp$ minor to A minor about a minute and a half into the song is correctly estimated, despite the high spillage into related keys. The second modulation, to B$\flat$ minor, is misunderstood as F minor. The sparser texture two-and-a-half minutes into the song throws off the key-finding algorithm seriously.
+
+### How am I supposed to dance when I can't find the beat? [temporal features]
+
+```{r}
+get_tidy_audio_analysis('6PJasPKAzNLSOzxeAH33j2') |> 
+    tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |> 
+    ggplot(aes(x = time, y = bpm, fill = power)) + 
+    geom_raster() + 
+    scale_fill_viridis_c(guide = 'none') +
+    labs(x = 'Time (s)', y = 'Tempo (BPM)') +
+    theme_classic()
+```
+
+***
+
+The Fourier-based tempogram at the left is an attempt to use Spotify's API to analyse the tempo of Graveola's 'Samba de outro lugar'. Overall, Spotify estimates that the tempo of this track is 124 BPM, but looking in more detail at the tempogram, we see that the different sections of the piece lead to different strengths of so-called *tempo octaves*. In some freer-form sections of the piece, tempo estimation is almost impossible.
