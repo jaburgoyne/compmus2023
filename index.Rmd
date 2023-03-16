@@ -473,3 +473,249 @@ get_tidy_audio_analysis('6PJasPKAzNLSOzxeAH33j2') |>
 ***
 
 The Fourier-based tempogram at the left is an attempt to use Spotify's API to analyse the tempo of Graveola's 'Samba de outro lugar'. Overall, Spotify estimates that the tempo of this track is 124 BPM, but looking in more detail at the tempogram, we see that the different sections of the piece lead to different strengths of so-called *tempo octaves*. In some freer-form sections of the piece, tempo estimation is almost impossible.
+
+### Speeing Up Your Flexdashboard Workflow 
+
+One of the most painful parts of working on your portfolio is having to wait for the entire dashboard to knit.
+If you have several data intensive figures (e.g. any sort of heatmaps, tempograms, plotly) each can take anywhere from 45 seconds to three minutes based on your machine.
+This means that as we get closer to submission, the time to knit will only go up if you keep all the visualizations you want in your portfolio as you work on it.
+
+This document explains how you might be able to speed up this process, but it comes at the price of needing to be a bit more sophisticated in how you set up your project.
+
+When implementing this, please first try to work through one graph.
+
+#### The Problem
+
+The problem with the current workflow is that each time you press Knit, you are re-creating everything for your dashboard/portfolio.
+
+This means...
+
+1. The `compmus` package needs to make its calls to the Spotify API
+2. All the data needs to be downloaded from the API
+3. Each plot needs to be re-rendered.
+
+Usually, you have only made changes to one visualization, want to Knit to se if your change worked, but have not touched any other ggplot.
+On top of this, may people's dataset is also not changing, so there is no need to re-download the data each time.
+What's going on under the hood is akin to you downloading the same PDF over and over again into your Downloads when you just can't remember where you put it.
+
+#### The Solution
+
+The solution to this problem is create a copy of whatever data or plot you want somewhere separate to where the code is rendered and call the local version when the plot is rendered, rather than creating each plot each and every single time. 
+
+Below we have suggested one way to set up this workflow. 
+
+Please try this first only with ONE plot to make sure you understand, then begin to intergrate it into your own code.
+
+##### Saving Your Data Locally
+
+If your project is not constantly pulling new data, but rather something that doen't change like the entire Rihanna discography or the same set of playlists, there is no need to download this from the Spotify API each and every time.
+
+What we are instead going to do is download this data once, save it somewhere in your project, then call that data when the dashboard is knit.
+The exact same logic will apply to any `ggplot` as well.
+
+This will create a bit more complex of a repository, but just follow these steps and this will work.
+
+###### Create a Data Directory
+
+The first thing you need to do is create a `data` folder in your portfolio.
+You can do this by clicking the `New Folder` button in RStudio.
+
+![](img/new-folder.png){width=75%}
+
+This is where we will keep any and all data that we want to [cache]() for our project (aka not re-load every time).
+
+###### Create an R Directory
+
+Just like we created a data data directory, we also want a place to keep the new R scripts we will work on.
+Call this director `R`.
+
+Your project directory should now have both a folder called `data` and one called `R`.
+
+(Excuse the other files there are in here!)
+
+![](img/double-dir.png){width=75%}
+
+###### Create A Specific Script
+
+Our next general step is to create a specific R script that does one and only one thing.
+
+For this first example, we are going to make a script that downloads our data.
+
+We set this up by first making a new R Script with the new button on the top right.
+
+![](img/new-R.png){width=75%}
+
+And IMMEDIATLY save this script as something like `download-data.R` in the `R` folder. 
+
+###### Migrate Download Code to New Script 
+
+The next step requires you to take the R code that you use in your flexdashboard for any downloading of your data and now move it to the `download-data.R` script.
+
+For example, in Week 13 I may have wanted to get the audio analysis for the Graveola song we looked at.
+
+Typically this line of code would be in my flexdashboard, but it is now moved to `download-data.R`.
+
+```{r, echo = TRUE}
+graveola <- get_tidy_audio_analysis("6PJasPKAzNLSOzxeAH33j2")
+```
+
+###### Save the Output 
+
+Up until this point, we have not used any NEW functions.
+
+This is the new, important step.
+
+What the above line of code does is uses the function `get_tidy_audio_analysis()` to make an object called `graveola` in your Environment.
+As discussed before, this happens each and every time that you Knit.
+
+What we are going to do now is save the `graveola` object in an RDS format in the `data` directory.
+
+```{r, echo = TRUE}
+saveRDS(object = graveola,file = "data/graveola-data.RDS")
+```
+
+Here we use the `saveRDS()` function (you can read about [RDS here if you are a nerd](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/readRDS)) to first tell it WHAT we want to save (the `graveola` object) and then second tell it WHERE we want to store it.
+In this case, using a character string to say put it in `data` and call it `graveola-data.RDS`.
+
+If you run this whole script, what happens is that `download-data.R` calls the Spotify API, saves the data to an R object, then writes it to your local computer.
+
+NOTE!
+  
+> For this to work, your R session needs to have all the packages already loaded (e.g. compmus, spotifyr) as well as have your secret keys accessible! You could load all of these libraries at the top of each new R script you are writing for your own sanity.
+
+If you look in your `data` directory after completing this step, it should look like this:
+  
+![](img/gdata.png){width=75%}
+
+The entire final script of `download-data.R` will look like this:
+  
+```{r, echo = TRUE}
+graveola <- get_tidy_audio_analysis("6PJasPKAzNLSOzxeAH33j2")
+
+saveRDS(object = graveola, file = "data/graveola-data.RDS")
+```
+
+For exact examples of how this looks, check out this [repositories repo on Github](https://github.com/jaburgoyne/compmus2023).
+
+###### Linking Local Data to Your flexdashboard
+
+Now you have a LOCAL copy of your data, what you will need to change in your flexdashboard is where you were downloading this data to something different.
+
+So your OLD code within your `index.Rmd` document would still have something like this:
+  
+```{r, echo = TRUE}
+graveola <- get_tidy_audio_analysis("6PJasPKAzNLSOzxeAH33j2")
+```
+
+But now remember we are NOT using the API function in the flexdashboard file anymore (your `index.Rmd`).
+We are now going to replace it with the cousin of `saveRDS()` which is `readRDS()`.
+
+We swap out the code above with:
+  
+```{r, echo = TRUE}
+graveola <- readRDS(file = "data/graveola-data.RDS")
+```
+
+Now the data during the Knit will come from your local computer, not the Spotify API.
+
+Note here that if you ever want to update your data or change it, you need to update the `download-data.R` script and re-run it.
+If you leave everything else the same, it will still save to the same file and it won't break your data pipeline.
+
+> Try this first with your data before moving on to the next step!!
+
+##### Doing this with your ggplots
+
+The beautiful thing about RDS files is that they store any R data just as you would want it to exist in your R environment.
+
+What this means is that **any object you create in your enviroment can be saved as an RDS file** which means that **ggplot** objects can be saved as RDS objects!
+
+This is big news!
+The same workflow that we used for our data can also be used to speed up the image rendering process.
+
+Let's go through and example here using one of the tempogram plots that takes ages to render.
+
+###### Create Tempogram R Script
+
+As you start to get more advanced as a programmer, you stop saving all your functions in the same file.
+Keep yourself organised by making another R script but this time we will call it `make-tempogram.R`.
+Again, save this file in the `R` directory.
+
+We mirror the same process above to first take out the code from our flexdashboard that is super slow and has to render each time, and we now put it in the new script, but make *two important changes*.
+
+So let's say we find this code that makes a tempogram in our flexdashboard `index.Rmd`.
+
+```{r, echo=TRUE}
+graveola |>
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+On my multi-thousand pound, for research, M1 chip macbook, this plot renders in about 45 seconds.
+That's too long.
+
+Remember it does it by taking our `graveola` object, then passing it into the `compmus` and `ggplot` functions in order to make it each and every time and does not save the results.
+
+So we take the code above, and now we are going to cut it out and paste it into our `make-tempogram.R` script.
+
+The *two important changes we need to make* are:
+  
+1. We need to assign this function's output to an object. Notice the function is now assigned `<-` to something called `graveola-plot`.
+2. We need to save the `graveola-plot` object in the RDS format at the bottom of the script. 
+
+Your `make-tempogram.R` script will have this code in it now:
+
+```{r, echo=TRUE}
+graveola_plot <- graveola |>
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+
+saveRDS(object = graveola_plot, file = "data/graveola-plot.RDS")
+```
+
+Now make sure to run this code so the plot is created and the object is written to your local computer.
+
+You could check that the new `.RDS` file is saved, see how to do that above using RStudio's finder.
+
+###### Load in plot
+
+As above, we follow the same process in our flexdashboard.
+
+Where we used to have:
+  
+```{r, eval = FALSE, echo = TRUE}
+graveola |>
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(x = "Time (s)", y = "Tempo (BPM)") +
+  theme_classic()
+```
+
+We cut this out and assuming that this code is happening below where we create the `graveola` object, we then put in:
+  
+```{r, echo=TRUE}
+graveola_plot <- readRDS(file = "data/graveola-plot.RDS")
+graveola_plot
+```
+
+And when this runs, it takes the _already rendered_ ggplot data, loads it in, then plots it.
+This runs in about 3 seconds, which is 15x faster than before.
+
+##### Working in this workflow
+
+If you commit to this workflow, you will have a few more things to track but it comes with much much much faster Knits.
+
+What we suggest doing is working on each plot individually, running it within the script you are working on, then continually saving it using the `saveRDS()` function.
+
+You now will be able to iterate much more quickly through your plots, saving you time and frustration.
+
+As this is a NEW workflow, if something does not work, please message David John Baker on Canvas right away, so we can make this tutorial clearer.
