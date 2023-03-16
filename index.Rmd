@@ -5,20 +5,16 @@ date: "Block 4"
 output: 
   flexdashboard::flex_dashboard:
     storyboard: true
-    theme:
-      version: 4
-      bootswatch: litera
+    theme: journal
     self_contained: false
-editor_options: 
-  chunk_output_type: console
 ---
 
 ```{r, setup}
 library(tidyverse)
 library(plotly)
+library(cowplot)
 library(spotifyr)
 library(compmus)
-library(cowplot)
 ```
 
 ### Welcome to Computational Musicology 2023!
@@ -29,6 +25,9 @@ You can access the lecture notes at the following links.
 
   - [Week 7 · Computational Musicology and (Audio) Visualisation](./notes/compmus2023-w07.html)
   - [Week 8 · Chromagrams](./notes/compmus2023-w08.html)
+  - [Week 9 · Cepstrograms and Self-Similarity Matrices](./notes/compmus2023-w09.html)
+  - [Week 10 · Chordograms and Keygrams](./notes/compmus2023-w10.html)
+  - [Week 11 · Novelty Functions and Tempograms](./notes/compmus2023-w11.html)
 
 This storyboard contains further examples from each week to inspire you. You can download the raw source code of the storyboard [here](./index.Rmd).
 
@@ -162,23 +161,120 @@ ggplotly(february_dip)
 
 In March 2019, [The Economist](https://www.economist.com/graphic-detail/2020/02/08/data-from-spotify-suggest-that-listeners-are-gloomiest-in-february?fsrc=scn/fb/te/bl/ed/sadsongssaysomuchdatafromspotifysuggestthatlistenersaregloomiestinfebruarygraphicdetail) published a graphic showing a worldwide dip in the emotional valence of the music to people people listen around February each year. The graphic also broke down the emotional valence for every month of the year for a selection of Spotify markets, and it revealed quite a surprise: although overall, there seemed to be two large groups, with Latin America and Spain listening to more positively valenced music than most of the rest of the world, the Netherlands stood on its own somewhere in between these two extremes. This graphic compares Spotify Top 50 in the Netherlands against Belgium, a more typical neighbouring country, as well as the worldwide average, on the standard valence--arousal model. More popular songs (worldwide) have larger dots; more danceable songs are yellow.
 
-### The Tallis Scholars sing Josquin more slowly than La Chapelle Royale -- except for one part [chroma features].
+### Chromagrams Can Be Fun! [chroma features]
+
+```{r pop-chroma}
+
+ewf <-
+  get_tidy_audio_analysis("3cfnGXJ9bmiWvFqEO6ff8B?si=fc8b75cc5a254be0") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+
+loveontop <-
+  get_tidy_audio_analysis("1z6WtY7X4HQJvzxC4UgkSf?si=498f16c4cea74323") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+
+allineed <-
+  get_tidy_audio_analysis("164VgxTozx99XCinCB9ITR?si=797ce93143424c36") |>
+  select(segments) |>
+  unnest(segments) |>
+  select(start, duration, pitches)
+
+
+```
+
+```{r pop-chroma-plots}
+
+ewf_plot <- ewf |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma() |> 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+    geom_vline(xintercept = 53, color = "red") +
+
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "After the Love Has Gone (Earth, Wind, and Fire)") +
+  theme_minimal() +
+  scale_fill_viridis_c() 
+
+
+loveontop_plot <- loveontop |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma() |> 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  geom_vline(xintercept = 184, color = "red") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Love On Top (Beyonce)") +
+  theme_minimal() +
+  scale_fill_viridis_c() 
+
+
+allineed_plot <- allineed |>
+  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
+  compmus_gather_chroma() |> 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  geom_vline(xintercept = 137, color = "red") +
+  geom_vline(xintercept = 186, color = "red") +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "All I Need (Collier, Mahalia, Ty Dolla $ign)") +
+  theme_minimal() +
+  scale_fill_viridis_c() 
+
+
+plot_grid(ewf_plot, loveontop_plot, allineed_plot, ncol = 1)
+
+```
+
+***
+
+Chroma can be a difficult concept to grasp, especially for those without musical training. The three charts on this page visualize three pop tunes that might help make this clearer.
+
+The first plot shows a recording of [Earth Wind and Fire's After the Love is Gone](https://open.spotify.com/track/3cfnGXJ9bmiWvFqEO6ff8B?si=55c53dd6dfc643c6), which begins in [F Major, then modulates down to E major using a chord that is a tritone away](https://www.youtube.com/watch?v=ZBpV-n10sfo) at 0:55 seconds. Note how at that moment on the spectrogram-- marked in red-- a clear concentration of energy away from F over to B!  
+
+The second plot shows Beyonce's [Love on Top](https://open.spotify.com/track/1z6WtY7X4HQJvzxC4UgkSf?si=ad690f7ecc594205). The tune is in a singular key for the first 2/3rd's of the song, but then at around 3:04 (184 seconds) the music modulates upwards each repeat of the chorus. Note here that the the chromagram is capturing the fact that the pitch classes are going up, though her voice is also singing higher (her tessitura!). Make sure not to confuse pitch height with chroma or pitch class! 
+
+The last plot shows the tune [All I Need](https://open.spotify.com/track/164VgxTozx99XCinCB9ITR?si=612e1f79f92b4c23), which also has a modulation, but interestingly moves from [Eb Major](https://youtube.com/watch?v=Dv9iaRJG2Yc&si=EnSIkaIECMiOmarE&t=128) to what is essentially [Bb half sharp in standard tuning (A4 = ~452.89 according to this transcription!)](https://youtube.com/watch?v=Dv9iaRJG2Yc&si=EnSIkaIECMiOmarE&t=128). This point is highlighted by the red lines on the chromagram and notice that since this "key" does not fit that well into A440, the relative magnitute of the pitches that were quite prominent (Bb + F) are not really replaced by any other pitches!
+
+### The Tallis Scholars sing Josquin more slowly than La Chapelle Royale -- except for one part [chroma features for DTW].
 
 ```{r tallis}
 tallis <-
-  get_tidy_audio_analysis("2J3Mmybwue0jyQ0UVMYurH") %>%
-  select(segments) %>%
-  unnest(segments) %>%
+  get_tidy_audio_analysis("2J3Mmybwue0jyQ0UVMYurH") |>
+  select(segments) |>
+  unnest(segments) |>
   select(start, duration, pitches)
 chapelle <-
-  get_tidy_audio_analysis("4ccw2IcnFt1Jv9LqQCOYDi") %>%
-  select(segments) %>%
-  unnest(segments) %>%
+  get_tidy_audio_analysis("4ccw2IcnFt1Jv9LqQCOYDi") |>
+  select(segments) |>
+  unnest(segments) |>
   select(start, duration, pitches)
 maria_dist <-
   compmus_long_distance(
-    tallis %>% mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
-    chapelle %>% mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
+    tallis |> mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
+    chapelle |> mutate(pitches = map(pitches, compmus_normalise, "manhattan")),
     feature = pitches,
     method = "aitchison"
   )
@@ -186,11 +282,11 @@ maria_dist <-
 
 ```{r tallis-plot}
 maria <-
-  maria_dist %>%
+  maria_dist |>
   mutate(
     tallis = xstart + xduration / 2,
     chapelle = ystart + yduration / 2
-  ) %>%
+  ) |>
   ggplot(
     aes(
       x = tallis,
@@ -243,102 +339,140 @@ For the first four stanzas, the relationship between the performances is consist
 
 Although the interactive mouse-overs from `ggplotly` are very helpful for understanding heat maps, they are very computationally intensive. Chromagrams and similarity matrices are often better as static images, like the visualisation at left.
 
-### Vizualizing More Chroma 
+### What is the structure of ‘Blood, Sweat, and Tears’ [chroma and timbre features]
 
-```{r pop-chroma}
-
-ewf <-
-  get_tidy_audio_analysis("3cfnGXJ9bmiWvFqEO6ff8B?si=fc8b75cc5a254be0") %>%
-  select(segments) %>%
-  unnest(segments) %>%
-  select(start, duration, pitches)
-
-loveontop <-
-  get_tidy_audio_analysis("1z6WtY7X4HQJvzxC4UgkSf?si=498f16c4cea74323") %>%
-  select(segments) %>%
-  unnest(segments) %>%
-  select(start, duration, pitches)
-
-allineed <-
-  get_tidy_audio_analysis("164VgxTozx99XCinCB9ITR?si=797ce93143424c36") %>%
-  select(segments) %>%
-  unnest(segments) %>%
-  select(start, duration, pitches)
-
-
-```
-
-```{r pop-chroma-plots}
-
-ewf_plot <- ewf %>%
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
-  compmus_gather_chroma() %>% 
+```{r hazes}
+bzt <-
+  get_tidy_audio_analysis("5ZLkc5RY1NM4FtGWEd6HOE") |>
+  compmus_align(bars, segments) |>
+  select(bars) |>
+  unnest(bars) |>
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "acentre", norm = "manhattan"
+      )
+  ) |>
+  mutate(
+    timbre =
+      map(segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  )
+bind_rows(
+  bzt |> 
+    compmus_self_similarity(pitches, "aitchison") |> 
+    mutate(d = d / max(d), type = "Chroma"),
+  bzt |> 
+    compmus_self_similarity(timbre, "euclidean") |> 
+    mutate(d = d / max(d), type = "Timbre")
+) |>
+  mutate() |> 
   ggplot(
     aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
     )
   ) +
   geom_tile() +
-    geom_vline(xintercept = 53, color = "red") +
-
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "After the Love Has Gone (Earth, Wind, and Fire)") +
-  theme_minimal() +
-  scale_fill_viridis_c() 
-
-
-loveontop_plot <- loveontop %>%
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
-  compmus_gather_chroma() %>% 
-  ggplot(
-    aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-  ) +
-  geom_tile() +
-  geom_vline(xintercept = 184, color = "red") +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Love On Top (Beyonce)") +
-  theme_minimal() +
-  scale_fill_viridis_c() 
-
-
-allineed_plot <- allineed %>%
-  mutate(pitches = map(pitches, compmus_normalise, "euclidean")) %>%
-  compmus_gather_chroma() %>% 
-  ggplot(
-    aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-  ) +
-  geom_tile() +
-  geom_vline(xintercept = 137, color = "red") +
-  geom_vline(xintercept = 186, color = "red") +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "All I Need (Collier, Mahalia, Ty Dolla $ign)") +
-  theme_minimal() +
-  scale_fill_viridis_c() 
-
-
-plot_grid(ewf_plot, loveontop_plot, allineed_plot, ncol = 1)
-
+  coord_fixed() +
+  facet_wrap(~type) +
+  scale_fill_viridis_c(option = "E", guide = "none") +
+  theme_classic() + 
+  labs(x = "", y = "")
 ```
 
 ***
 
-Chroma can be a difficult concept to grasp, especially for those without musical training. The three charts on this page visualize three pop tunes that might help make this clearer.
+The two self-similarity matrices at the right, each summarised at the bar level but with axes in seconds, illustrate pitch- and timbre-based self-similarity within Andre Hazes's famous ‘Bloed, Zweet en Tranen’ (2002). Both are necessary to understand the structure of the song. The chroma-based matrix picks up the five presentations of the chorus very clearly but mostly misses the poignant changes in texture during the three verses. These changes are very visible in the timbre-based matrix, especially the third verse. The timbre-based matrix also illustrates the unbalanced song structure, climaxing about halfway through and thereafter simply repeating the chorus until the fade-out. The closing guitar solo is faintly visible in the top-right corner.
 
-The first plot shows a recording of [Earth Wind and Fire's After the Love is Gone](https://open.spotify.com/track/3cfnGXJ9bmiWvFqEO6ff8B?si=55c53dd6dfc643c6), which begins in [F Major, then modulates down to E major using a chord that is a tritone away](https://www.youtube.com/watch?v=ZBpV-n10sfo) at 0:55 seconds. Note how at that moment on the spectrogram-- marked in red-- a clear concentration of energy away from F over to B!  
+### Truck-driver modulations in the Year 2525 [tonal analysis]
 
-The second plot shows Beyonce's [Love on Top](https://open.spotify.com/track/1z6WtY7X4HQJvzxC4UgkSf?si=ad690f7ecc594205). The tune is in a singular key for the first 2/3rd's of the song, but then at around 3:04 (184 seconds) the music modulates upwards each repeat of the chorus. Note here that the the chromagram is capturing the fact that the pitch classes are going up, though her voice is also singing higher (her tessitura!). Make sure not to confuse pitch height with chroma or pitch class! 
+```{r twenty-five}
+circshift <- function(v, n) {
+  if (n == 0) v else c(tail(v, n), head(v, -n))
+}
 
-The last plot shows the tune [All I Need](https://open.spotify.com/track/164VgxTozx99XCinCB9ITR?si=612e1f79f92b4c23), which also has a modulation, but interestingly moves from [Eb Major](https://youtube.com/watch?v=Dv9iaRJG2Yc&si=EnSIkaIECMiOmarE&t=128) to what is essentially [Bb half sharp in standard tuning (A4 = ~452.89 according to this transcription!)](https://youtube.com/watch?v=Dv9iaRJG2Yc&si=EnSIkaIECMiOmarE&t=128). This point is highlighted by the red lines on the chromagram and notice that since this "key" does not fit that well into A440, the relative magnitute of the pitches that were quite prominent (Bb + F) are not really replaced by any other pitches!
+major_key <-
+  c(6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88)
+minor_key <-
+  c(6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17)
+key_templates <-
+  tribble(
+    ~name, ~template,
+    "Gb:maj", circshift(major_key, 6),
+    "Bb:min", circshift(minor_key, 10),
+    "Db:maj", circshift(major_key, 1),
+    "F:min", circshift(minor_key, 5),
+    "Ab:maj", circshift(major_key, 8),
+    "C:min", circshift(minor_key, 0),
+    "Eb:maj", circshift(major_key, 3),
+    "G:min", circshift(minor_key, 7),
+    "Bb:maj", circshift(major_key, 10),
+    "D:min", circshift(minor_key, 2),
+    "F:maj", circshift(major_key, 5),
+    "A:min", circshift(minor_key, 9),
+    "C:maj", circshift(major_key, 0),
+    "E:min", circshift(minor_key, 4),
+    "G:maj", circshift(major_key, 7),
+    "B:min", circshift(minor_key, 11),
+    "D:maj", circshift(major_key, 2),
+    "F#:min", circshift(minor_key, 6),
+    "A:maj", circshift(major_key, 9),
+    "C#:min", circshift(minor_key, 1),
+    "E:maj", circshift(major_key, 4),
+    "G#:min", circshift(minor_key, 8),
+    "B:maj", circshift(major_key, 11),
+    "D#:min", circshift(minor_key, 3)
+  )
+
+get_tidy_audio_analysis("5UVsbUV0Kh033cqsZ5sLQi") |>
+  compmus_align(sections, segments) |>
+  select(sections) |>
+  unnest(sections) |>
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "acentre", norm = "manhattan"
+      )
+  ) |>
+  compmus_match_pitch_template(key_templates, "aitchison", "manhattan") |>
+  ggplot(
+    aes(x = start + duration / 2, width = duration, y = name, fill = d)
+  ) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "E", guide = "none") +
+  theme_minimal() +
+  labs(x = "Time (s)", y = "", fill = "Distance")
+```
+
+***
+    
+The keygram at the left shows the two modulations in Zager and Evans's 'In the Year 2525' (1969). The piece is segmented according to Spotify's estimates, and the distances represented are Aitchison distances from Spotify's chroma vectors to the original Krumhansl--Kessler key profiles (1990). 
+
+The piece does not follow common-era tonal conventions, and the key estimates are blurry. The move from G$\sharp$ minor to A minor about a minute and a half into the song is correctly estimated, despite the high spillage into related keys. The second modulation, to B$\flat$ minor, is misunderstood as F minor. The sparser texture two-and-a-half minutes into the song throws off the key-finding algorithm seriously.
+
+### How am I supposed to dance when I can't find the beat? [temporal features]
+
+```{r}
+get_tidy_audio_analysis('6PJasPKAzNLSOzxeAH33j2') |> 
+    tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |> 
+    ggplot(aes(x = time, y = bpm, fill = power)) + 
+    geom_raster() + 
+    scale_fill_viridis_c(guide = 'none') +
+    labs(x = 'Time (s)', y = 'Tempo (BPM)') +
+    theme_classic()
+```
+
+***
+
+The Fourier-based tempogram at the left is an attempt to use Spotify's API to analyse the tempo of Graveola's 'Samba de outro lugar'. Overall, Spotify estimates that the tempo of this track is 124 BPM, but looking in more detail at the tempogram, we see that the different sections of the piece lead to different strengths of so-called *tempo octaves*. In some freer-form sections of the piece, tempo estimation is almost impossible.
 
 ### Speeing Up Your Flexdashboard Workflow 
 
@@ -372,7 +506,6 @@ Below we have suggested one way to set up this workflow.
 
 Please try this first only with ONE plot to make sure you understand, then begin to intergrate it into your own code.
 
-
 ##### Saving Your Data Locally
 
 If your project is not constantly pulling new data, but rather something that doen't change like the entire Rihanna discography or the same set of playlists, there is no need to download this from the Spotify API each and every time.
@@ -387,7 +520,7 @@ This will create a bit more complex of a repository, but just follow these steps
 The first thing you need to do is create a `data` folder in your portfolio.
 You can do this by clicking the `New Folder` button in RStudio.
 
-![](img/new-folder.png)
+![](img/new-folder.png){width=75%}
 
 This is where we will keep any and all data that we want to [cache]() for our project (aka not re-load every time).
 
@@ -400,7 +533,7 @@ Your project directory should now have both a folder called `data` and one calle
 
 (Excuse the other files there are in here!)
 
-![](img/double-dir.png)
+![](img/double-dir.png){width=75%}
 
 ###### Create A Specific Script
 
@@ -410,7 +543,7 @@ For this first example, we are going to make a script that downloads our data.
 
 We set this up by first making a new R Script with the new button on the top right.
 
-![](img/new-R.png)
+![](img/new-R.png){width=75%}
 
 And IMMEDIATLY save this script as something like `download-data.R` in the `R` folder. 
 
@@ -422,7 +555,7 @@ For example, in Week 13 I may have wanted to get the audio analysis for the Grav
 
 Typically this line of code would be in my flexdashboard, but it is now moved to `download-data.R`.
 
-```{r}
+```{r, echo = TRUE}
 graveola <- get_tidy_audio_analysis("6PJasPKAzNLSOzxeAH33j2")
 ```
 
@@ -437,7 +570,7 @@ As discussed before, this happens each and every time that you Knit.
 
 What we are going to do now is save the `graveola` object in an RDS format in the `data` directory.
 
-```{r}
+```{r, echo = TRUE}
 saveRDS(object = graveola,file = "data/graveola-data.RDS")
 ```
 
@@ -447,16 +580,16 @@ In this case, using a character string to say put it in `data` and call it `grav
 If you run this whole script, what happens is that `download-data.R` calls the Spotify API, saves the data to an R object, then writes it to your local computer.
 
 NOTE!
-
+  
 > For this to work, your R session needs to have all the packages already loaded (e.g. compmus, spotifyr) as well as have your secret keys accessible! You could load all of these libraries at the top of each new R script you are writing for your own sanity.
 
 If you look in your `data` directory after completing this step, it should look like this:
-
-![](img/gdata.png)
+  
+![](img/gdata.png){width=75%}
 
 The entire final script of `download-data.R` will look like this:
-
-```{r}
+  
+```{r, echo = TRUE}
 graveola <- get_tidy_audio_analysis("6PJasPKAzNLSOzxeAH33j2")
 
 saveRDS(object = graveola, file = "data/graveola-data.RDS")
@@ -469,9 +602,8 @@ For exact examples of how this looks, check out this [repositories repo on Githu
 Now you have a LOCAL copy of your data, what you will need to change in your flexdashboard is where you were downloading this data to something different.
 
 So your OLD code within your `index.Rmd` document would still have something like this:
-
-
-```{r}
+  
+```{r, echo = TRUE}
 graveola <- get_tidy_audio_analysis("6PJasPKAzNLSOzxeAH33j2")
 ```
 
@@ -479,8 +611,8 @@ But now remember we are NOT using the API function in the flexdashboard file any
 We are now going to replace it with the cousin of `saveRDS()` which is `readRDS()`.
 
 We swap out the code above with:
-
-```{r}
+  
+```{r, echo = TRUE}
 graveola <- readRDS(file = "data/graveola-data.RDS")
 ```
 
@@ -512,7 +644,7 @@ We mirror the same process above to first take out the code from our flexdashboa
 
 So let's say we find this code that makes a tempogram in our flexdashboard `index.Rmd`.
 
-```{r}
+```{r, echo=TRUE}
 graveola |>
   tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
   ggplot(aes(x = time, y = bpm, fill = power)) +
@@ -530,13 +662,13 @@ Remember it does it by taking our `graveola` object, then passing it into the `c
 So we take the code above, and now we are going to cut it out and paste it into our `make-tempogram.R` script.
 
 The *two important changes we need to make* are:
-
+  
 1. We need to assign this function's output to an object. Notice the function is now assigned `<-` to something called `graveola-plot`.
 2. We need to save the `graveola-plot` object in the RDS format at the bottom of the script. 
 
 Your `make-tempogram.R` script will have this code in it now:
 
-```{r}
+```{r, echo=TRUE}
 graveola_plot <- graveola |>
   tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
   ggplot(aes(x = time, y = bpm, fill = power)) +
@@ -557,8 +689,8 @@ You could check that the new `.RDS` file is saved, see how to do that above usin
 As above, we follow the same process in our flexdashboard.
 
 Where we used to have:
-
-```{r, eval = FALSE}
+  
+```{r, eval = FALSE, echo = TRUE}
 graveola |>
   tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) |>
   ggplot(aes(x = time, y = bpm, fill = power)) +
@@ -569,8 +701,8 @@ graveola |>
 ```
 
 We cut this out and assuming that this code is happening below where we create the `graveola` object, we then put in:
-
-```{r}
+  
+```{r, echo=TRUE}
 graveola_plot <- readRDS(file = "data/graveola-plot.RDS")
 graveola_plot
 ```
@@ -587,5 +719,3 @@ What we suggest doing is working on each plot individually, running it within th
 You now will be able to iterate much more quickly through your plots, saving you time and frustration.
 
 As this is a NEW workflow, if something does not work, please message David John Baker on Canvas right away, so we can make this tutorial clearer.
-
-
