@@ -171,13 +171,10 @@ indie <-
   bind_rows(
     pop |> mutate(playlist = "Indie Pop"),
     party |> mutate(playlist = "Indie Party"),
-    workout |> mutate(playlist = "Indie Workout")
+    workout |> mutate(playlist = "Indie Running")
   ) |>
   mutate(playlist = factor(playlist)) |>
-  mutate(
-    segments =
-      map2(segments, key, compmus_c_transpose)
-  ) |>
+  mutate(segments = map2(segments, key, compmus_c_transpose)) |>
   mutate(
     pitches =
       map(segments,
@@ -207,10 +204,7 @@ indie_deltas <-
     workout |> mutate(playlist = "Indie Workout")
   ) |>
   mutate(playlist = factor(playlist)) |>
-  mutate(
-    segments =
-      map2(segments, key, compmus_c_transpose)
-  ) |>
+  mutate(segments = map2(segments, key, compmus_c_transpose)) |>
   mutate(
     segments =
       map(
