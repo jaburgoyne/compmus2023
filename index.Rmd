@@ -11,7 +11,10 @@ output:
 
 ```{r, setup}
 library(tidyverse)
+library(tidymodels)
 library(plotly)
+library(heatmaply)
+library(protoclust)
 library(cowplot)
 library(spotifyr)
 library(compmus)
@@ -28,6 +31,7 @@ You can access the lecture notes at the following links.
   - [Week 9 · Cepstrograms and Self-Similarity Matrices](./notes/compmus2023-w09.html)
   - [Week 10 · Chordograms and Keygrams](./notes/compmus2023-w10.html)
   - [Week 11 · Novelty Functions and Tempograms](./notes/compmus2023-w11.html)
+  - [Week 12 · Dendrograms](./notes/compmus2023-w12.html)
 
 This storyboard contains further examples from each week to inspire you. You can download the raw source code of the storyboard [here](./index.Rmd).
 
@@ -188,7 +192,8 @@ allineed <-
 
 ```{r pop-chroma-plots}
 
-ewf_plot <- ewf |>
+ewf_plot <- 
+  ewf |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
   compmus_gather_chroma() |> 
   ggplot(
@@ -200,14 +205,18 @@ ewf_plot <- ewf |>
     )
   ) +
   geom_tile() +
-    geom_vline(xintercept = 53, color = "red") +
-
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "After the Love Has Gone (Earth, Wind, and Fire)") +
+  geom_vline(xintercept = 53, color = "red") +
+  labs(
+    x = "Time (s)", 
+    y = NULL, 
+    fill = "Magnitude", 
+    title = "After the Love Has Gone (Earth, Wind, and Fire)"
+  ) +
   theme_minimal() +
   scale_fill_viridis_c() 
 
-
-loveontop_plot <- loveontop |>
+loveontop_plot <- 
+  loveontop |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
   compmus_gather_chroma() |> 
   ggplot(
@@ -220,12 +229,17 @@ loveontop_plot <- loveontop |>
   ) +
   geom_tile() +
   geom_vline(xintercept = 184, color = "red") +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "Love On Top (Beyonce)") +
+  labs(
+    x = "Time (s)",
+    y = NULL, 
+    fill = "Magnitude",
+    title = "Love On Top (Beyonce)"
+  ) +
   theme_minimal() +
   scale_fill_viridis_c() 
 
-
-allineed_plot <- allineed |>
+allineed_plot <- 
+  allineed |>
   mutate(pitches = map(pitches, compmus_normalise, "euclidean")) |>
   compmus_gather_chroma() |> 
   ggplot(
@@ -239,13 +253,16 @@ allineed_plot <- allineed |>
   geom_tile() +
   geom_vline(xintercept = 137, color = "red") +
   geom_vline(xintercept = 186, color = "red") +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title = "All I Need (Collier, Mahalia, Ty Dolla $ign)") +
+  labs(
+    x = "Time (s)", 
+    y = NULL, 
+    fill = "Magnitude", 
+    title = "All I Need (Collier, Mahalia, Ty Dolla $ign)"
+  ) +
   theme_minimal() +
   scale_fill_viridis_c() 
 
-
 plot_grid(ewf_plot, loveontop_plot, allineed_plot, ncol = 1)
-
 ```
 
 ***
@@ -462,14 +479,151 @@ The piece does not follow common-era tonal conventions, and the key estimates ar
 
 ```{r}
 get_tidy_audio_analysis('6PJasPKAzNLSOzxeAH33j2') |> 
-    tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |> 
-    ggplot(aes(x = time, y = bpm, fill = power)) + 
-    geom_raster() + 
-    scale_fill_viridis_c(guide = 'none') +
-    labs(x = 'Time (s)', y = 'Tempo (BPM)') +
-    theme_classic()
+  tempogram(window_size = 8, hop_size = 1, cyclic = FALSE) |> 
+  ggplot(aes(x = time, y = bpm, fill = power)) + 
+  geom_raster() + 
+  scale_fill_viridis_c(guide = 'none') +
+  labs(x = 'Time (s)', y = 'Tempo (BPM)') +
+  theme_classic()
 ```
 
 ***
 
 The Fourier-based tempogram at the left is an attempt to use Spotify's API to analyse the tempo of Graveola's 'Samba de outro lugar'. Overall, Spotify estimates that the tempo of this track is 124 BPM, but looking in more detail at the tempogram, we see that the different sections of the piece lead to different strengths of so-called *tempo octaves*. In some freer-form sections of the piece, tempo estimation is almost impossible.
+
+### What are the components of a Hallowe'en playlist?
+
+```{r halloween}
+halloween <-
+  get_playlist_audio_features("bnfcollection", "1vsoLSK3ArkpaIHmUaF02C") |>
+  add_audio_analysis() |>
+  mutate(segments = map2(segments, key, compmus_c_transpose)) |>
+  mutate(
+    pitches =
+      map(
+        segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  ) |>
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
+  mutate_at(vars(pitches, timbre), map, bind_rows) |>
+  unnest(cols = c(pitches, timbre))
+halloween_juice <-
+  recipe(
+    track.name ~
+      danceability +
+      energy +
+      loudness +
+      speechiness +
+      acousticness +
+      instrumentalness +
+      liveness +
+      valence +
+      tempo +
+      duration +
+      C + `C#|Db` + D + `D#|Eb` +
+      E + `F` + `F#|Gb` + G +
+      `G#|Ab` + A + `A#|Bb` + B +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = halloween
+  ) |>
+  step_range(all_predictors()) |>
+  prep(halloween |> mutate(track.name = str_trunc(track.name, 20))) |>
+  juice() |>
+  column_to_rownames("track.name")
+ggheatmap(
+  halloween_juice,
+  hclustfun = protoclust,
+  dist_method = "manhattan"
+)
+```
+
+***
+
+The dendrogram and heatmap at right breaks the Bibliothèque nationale de France's Hallowe'en playlist into four clusters based on Gower's distance. First, there is a small, more classical cluster, that stay strictly in their original keys with low values for C sharp, G sharp, and A sharp. Second, there is a group of danceable, high-energy tracks. The third group is difficult to characterise on the basis of the heatmap: if anything, there seems to be lower emphasis on major thirds and leading tones, perhaps pentatonic tonality. The final group clearly represents the non-instrumental, low-valence tracks on the list. 
+
+The song titles make it clear that the over-arching them of this list has more to do with textual than musical content, however, which is not available in the Spotify API. 
+
+### Classifying independent workouts
+
+```{r workouts}
+pop <-
+  get_playlist_audio_features("spotify", "37i9dQZF1DWWEcRhUVtL8n") |>
+  add_audio_analysis()
+party <-
+  get_playlist_audio_features("spotify", "37i9dQZF1DWTujiC7wfofZ") |>
+  add_audio_analysis()
+workout <-
+  get_playlist_audio_features("spotify", "37i9dQZF1DWZq91oLsHZvy") |>
+  add_audio_analysis()
+indie <-
+  pop |>
+  mutate(playlist = "Indie Pop") |>
+  bind_rows(
+    party |> mutate(playlist = "Indie Party"),
+    workout |> mutate(playlist = "Indie Running")
+  ) |>
+  mutate(playlist = factor(playlist)) |>
+  mutate(segments = map2(segments, key, compmus_c_transpose)) |>
+  mutate(
+    pitches =
+      map(segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean"
+      )
+  ) |>
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) |>
+  mutate_at(vars(pitches, timbre), map, bind_rows) |>
+  unnest(cols = c(pitches, timbre))
+indie_recipe <-
+  indie |> 
+  recipe(
+    playlist ~ c01 + liveness + acousticness + c02 + energy, 
+    data = _
+  ) |> 
+  step_center(all_predictors()) |>
+  step_scale(all_predictors())
+indie_cv <- indie |> vfold_cv(10)
+knn_model <-
+  nearest_neighbor(neighbors = 1) |>
+  set_mode("classification") |> 
+  set_engine("kknn")
+indie_knn <-
+  workflow() |> 
+  add_recipe(indie_recipe) |> 
+  add_model(knn_model) |> 
+  fit_resamples(indie_cv, control = control_resamples(save_pred = TRUE))
+indie_names <- indie_knn |> .get_tune_outcome_names()
+indie_knn |>
+  collect_predictions() |> 
+  conf_mat(truth = indie_names, estimate = .pred_class) |> 
+  autoplot(type = "mosaic")
+```
+
+***
+
+The mosaic at the left shows the performance of a classifier trying to distinguish three Spotify playlists: Indie Pop, Indie Party, and Indie Workout. Using a random-forest classifier, the most important features for classifying tracks among these playlists are:
+
+  - Timbre Component 1 (loudness),
+  - Timbre Component 2 (brightness),
+  - liveness,
+  - acousticness, and
+  - energy.
+  
+After these five features, there is a substantial drop in importance. The mosaic displays the results, after 10-fold cross-validation, of a nearest-neighbour classifier with just these five features. 
+
+The performance of the classifier is mediocre: overall classification accuracy is 54 percent, with a J-index of 0.26. Although these features are reasonably effective at identifying the music on the party playlist, it struggles to distinguish workout music from pop music. Either Spotify's Indie Workout playlist is not as tailored to workouts as its name would lead users to believe, or we need features beyond the Spotify itself to make the distinction. 
