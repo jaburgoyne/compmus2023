@@ -623,7 +623,7 @@ After these five features, there is a substantial drop in importance. The mosaic
 
 The performance of the classifier is mediocre: overall classification accuracy is 51 percent, with a J-index of 0.16. Although these features are reasonably effective at identifying the music on the party playlist, it struggles to distinguish running music from party music. Either Spotify's Indie Running playlist is not as tailored to workouts as its name would lead users to believe, or we need features beyond the Spotify itself to make the distinction. 
 
-### Speeding Up Your Flexdashboard Workflow 
+### Speeding up your flexdashboard workflow 
 
 One of the most painful parts of working on your portfolio is having to wait for the entire dashboard to knit.
 If you have several data intensive figures (e.g. any sort of heatmaps, tempograms, plotly) each can take anywhere from 45 seconds to three minutes based on your machine.
