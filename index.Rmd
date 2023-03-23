@@ -719,3 +719,117 @@ What we suggest doing is working on each plot individually, running it within th
 You now will be able to iterate much more quickly through your plots, saving you time and frustration.
 
 As this is a NEW workflow, if something does not work, please message David John Baker on Canvas right away, so we can make this tutorial clearer.
+
+### Coloring Your Dendrograms 
+
+One visualization that might be visually useful, but might be hard to figure out how to do is colouring a dendrogram based on the original labels from the dataset.
+There are sevearl libraries that do this in R, but not many that work well with the code we have provided for you. 
+
+Below is an example of how to create a basic dendrogram with music from three playlists while colouring the original items based on the original playlist.
+
+The code borrows from our work in Week 12, with some key modifications.
+
+Note that in order to do this type of analysis you are not allowed to have more than song exist in more two classes at once!
+In order to get around this, we have included code to remove all duplicates.
+
+#### Code to Reproduce Plot 
+
+```{r, echo = TRUE}
+# Download Data 
+library(tidymodels)
+library(ggdendro)
+
+pop <- get_playlist_audio_features("spotify", "37i9dQZF1DWWEcRhUVtL8n")
+party <- get_playlist_audio_features("spotify", "37i9dQZF1DWTujiC7wfofZ")
+workout <- get_playlist_audio_features("spotify", "37i9dQZF1DWZq91oLsHZvy")
+
+indie <-
+  bind_rows(
+    pop |> mutate(playlist = "Indie Pop") |> slice_head(n = 20),
+    party |> mutate(playlist = "Indie Party") |> slice_head(n = 20),
+    workout |> mutate(playlist = "Indie Running") |> slice_head(n = 20)
+  ) |> 
+  add_audio_analysis()
+
+
+# Note that you are not allowed to have duplicate songs in the dataset! 
+indie |>
+  count(track.name) %>%
+  arrange(desc(n))
+
+# Grab only track names where it's listed more than once
+tracks_to_remove <- indie |>
+  count(track.name) |>
+  filter(n >= 2) %>%
+  select(track.name)
+
+indie <- indie %>%
+  anti_join(tracks_to_remove)
+
+# Similar to code from class, still trying to predict track.name but later we add on playlist name!
+indie_juice <-
+  recipe(
+    track.name ~
+      danceability +
+      energy +
+      loudness +
+      speechiness +
+      acousticness +
+      instrumentalness +
+      liveness +
+      valence +
+      tempo,
+    data = indie
+  ) |>
+  step_center(all_predictors()) |>
+  step_scale(all_predictors()) |> 
+  # step_range(all_predictors()) |> 
+  prep(indie |> mutate(track.name = str_trunc(track.name, 20))) |>
+  juice() |>
+  column_to_rownames("track.name")
+
+indie_dist <- dist(indie_juice, method = "euclidean")
+
+data_for_indie_clustering <- indie_dist |> 
+  hclust(method = "average") |> # average for a balanced tree!
+  dendro_data() 
+
+playlist_data_for_join <- indie %>%
+  select(track.name, playlist_name) %>%
+  mutate(label = str_trunc(track.name, 20))
+
+data_for_indie_clustering$labels <- data_for_indie_clustering$labels %>%
+  left_join(playlist_data_for_join)
+
+# Add factor so can use colouring! 
+data_for_indie_clustering$labels$label <- factor(data_for_indie_clustering$labels$label)
+
+
+```
+
+#### Plot
+
+```{r, echo = TRUE}
+data_for_indie_clustering |>
+  ggdendrogram() +
+  geom_text(data = label(data_for_indie_clustering), aes(x, y, 
+                                   label=label, 
+                                   hjust=0, 
+                                   colour=playlist_name), size=3) +
+  coord_flip() + 
+  scale_y_reverse(expand=c(0.2, 0)) +
+  theme(axis.line.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.title.y=element_blank(),
+        panel.background=element_rect(fill="white"),
+        panel.grid=element_blank()) +
+  labs(title = "Playlist Clustering") +
+  guides(
+    color = guide_legend(
+      title = "Playlist"
+    )
+  )
+
+```
+
